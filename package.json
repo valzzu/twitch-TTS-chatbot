@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "@twurple/api": "^7.0.3",
+    "@twurple/auth": "^7.0.3",
+    "@twurple/chat": "^7.0.3",
+    "@twurple/easy-bot": "^7.0.3",
+    "@twurple/eventsub-ws": "^7.0.3",
+    "@twurple/pubsub": "^7.0.3",
+    "express": "^4.18.2",
+    "gpt4all": "^2.2.0",
+    "http": "^0.0.1-security",
+    "node_characterai": "^1.2.1",
+    "python-shell": "^5.0.0",
+    "say": "^0.16.0",
+    "socket.io": "^4.7.2"
+  },
+  "type": "module"
+}

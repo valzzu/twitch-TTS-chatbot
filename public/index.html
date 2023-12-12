@@ -1,0 +1,253 @@
+<!-- index.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.js"></script>
+    <link rel="stylesheet" href="style.css" />
+    <title>Twitch Chat Viewer</title>
+  </head>
+  <body>
+    <div class="container rounded sticky-container" style="max-width: 1200px">
+      <div class="row">
+        <!-- Twitch message and Currently Spoken -->
+        <div class="col-md-6">
+          <!-- Twitch message -->
+          <div class="card mb-4">
+            <div class="card-body">
+              <h5 class="card-title">Latest Message</h5>
+              <div id="twitchMessage"></div>
+            </div>
+          </div>
+
+          <!-- Currently Spoken -->
+          <div class="card mb-4 rounded">
+            <div class="card-body">
+              <h5 class="card-title">Currently Speaking</h5>
+              <div id="currentlySpoken"></div>
+            </div>
+          </div>
+          <div class="card mb-4 rounded">
+            <div class="card-body">
+              <h5 class="card-title">Swear Words</h5>
+              <textarea
+                id="swearWordsTextarea"
+                class="form-control"
+                rows="5"
+              ></textarea>
+              <button id="SaveButton" class="btn btn-primary rounded">
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Queue and Message Queue -->
+        <div class="col-md-6 rounded">
+          <div class="card h-100 w-100">
+            <div class="card-body flex-fill">
+              <h5 class="card-title">Queue</h5>
+              <ul id="queueList" class="list-group"></ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toggle TTS checkbox -->
+      <div class="col-md-6 mt-2 rounded">
+        <div class="custom-control custom-switch custom-switch-lg">
+          <input type="checkbox" class="custom-control-input" id="toggleTTS" />
+          <label
+            class="custom-control-label font-weight-bold text-dark text-white"
+            for="toggleTTS"
+            >Enable TTS</label
+          >
+        </div>
+        <div class="custom-control custom-switch custom-switch-lg">
+          <input
+            type="checkbox"
+            class="custom-control-input"
+            id="toggleFiltering"
+          />
+          <label
+            class="custom-control-label font-weight-bold text-dark text-white"
+            for="toggleFiltering"
+            >Enable Filtering</label
+          >
+        </div>
+      </div>
+      <div class="container mt-4">
+        <div class="row">
+          <div class="col-md-6">
+            <label for="voiceSelect">Say name?:</label>
+            <!-- Your dropdown menu -->
+            <select id="toggleDropdown" class="custom-select">
+              <option value="option1">no names</option>
+              <option value="option2">all names</option>
+              <option value="option3">specific names</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <label for="voiceSelect">Select a voice:</label>
+            <!-- Your dropdown menu -->
+            <select id="voiceDropdown" class="custom-select">
+              <option value="option1">no names</option>
+              <option value="option2">all names</option>
+              <option value="option3">specific names</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="container mt-4">
+        <!-- Skip TTS Button -->
+        <button id="skipButton" class="btn btn-primary rounded">
+          Skip Message
+        </button>
+        <!-- Clear Queue Button -->
+        <button id="clearQueueButton" class="btn btn-danger rounded">
+          Clear Queue
+        </button>
+      </div>
+    </div>
+    <script>
+      const socket = io();
+      const twitchMessageContainer = document.getElementById("twitchMessage");
+      const currentlySpokenContainer =
+        document.getElementById("currentlySpoken");
+      const skipTTSButton = document.getElementById("skipButton");
+      const queueList = document.getElementById("queueList");
+      const clearQueueButton = document.getElementById("clearQueueButton");
+
+      const toggleTTSCheckbox = document.getElementById("toggleTTS");
+      const toggleFilteringCheckbox =
+        document.getElementById("toggleFiltering");
+      // Select the dropdown menu
+      const toggleDropdown = document.getElementById("toggleDropdown");
+
+      const swearWordsTextarea = document.getElementById("swearWordsTextarea");
+      const saveButton = document.getElementById("SaveButton");
+
+      const voiceSelect = document.getElementById("voiceDropdown");
+
+      socket.on("isTTSEnabled", (isTTSEnabled) => {
+        toggleTTSCheckbox.checked = isTTSEnabled;
+      });
+
+      socket.on("isFilterEnabled", (isFilterEnabled) => {
+        toggleFilteringCheckbox.checked = isFilterEnabled;
+      });
+
+      // Listen for Twitch messages
+      socket.on("twitchMessage", ({ message }) => {
+        // Display the latest Twitch message
+        const formattedMessage = message;
+        twitchMessageContainer.textContent = formattedMessage;
+      });
+
+      // Listen for updates on the currently spoken message
+      socket.on("currentlySpoken", (message) => {
+        currentlySpokenContainer.textContent = message;
+      });
+
+      // Listen for updates on the message queue
+      socket.on("messageQueue", (queue) => {
+        // Clear the current queue list
+        queueList.innerHTML = "";
+
+        // Display the updated queue
+        queue.forEach((message) => {
+          const listItem = document.createElement("li");
+          listItem.textContent = message;
+          queueList.appendChild(listItem);
+        });
+      });
+
+      // Listen for skip TTS button click
+      skipTTSButton.addEventListener("click", () => {
+        socket.emit("skipTTS");
+        console.log("Skip TTS button clicked");
+      });
+
+      // Listen for cleat queue button click
+      clearQueueButton.addEventListener("click", () => {
+        socket.emit("clearQueue");
+        console.log("Clear queue button clicked");
+      });
+      document.addEventListener("DOMContentLoaded", () => {
+        // Select the toggleTTS checkbox
+        const toggleTTSCheckbox = document.getElementById("toggleTTS");
+
+        // Event listener for the toggleTTS checkbox change event
+        toggleTTSCheckbox.addEventListener("change", () => {
+          // Send a request to the server to toggle TTS status
+          fetch("/toggleTTS", { method: "POST" })
+            .then((response) => response.text())
+            .then((data) => console.log(data)) // Log the server response
+            .catch((error) => console.error("Error toggling TTS:", error));
+        });
+        toggleFilteringCheckbox.addEventListener("change", () => {
+          // Send a request to the server to toggle Filtering status
+          fetch("/toggleFiltering", { method: "POST" })
+            .then((response) => response.text())
+            .then((data) => console.log(data)) // Log the server response
+            .catch((error) =>
+              console.error("Error toggling Filtering:", error)
+            );
+        });
+
+        saveButton.addEventListener("click", () => {
+          // Split the textarea value into an array of swear words
+
+          console.log(swearWordsTextarea.value);
+
+          socket.emit("updateSwearWords", swearWordsTextarea.value);
+        });
+
+        socket.on("SwearWords", (swearWords) => {
+          // Join the swear words into a string and set it as the textarea value
+          swearWordsTextarea.value = swearWords;
+          //console.log(swearWords);
+        });
+      });
+
+      // Event listener for the dropdown change event
+      toggleDropdown.addEventListener("change", () => {
+        const selectedValue = toggleDropdown.value;
+
+        // Send a request to the server to toggle the three-way toggle state
+        socket.emit("toggleDropdown", selectedValue);
+      });
+
+      socket.on("Voices", (voices) => {
+        // Clear the current dropdown menu
+        voiceSelect.innerHTML = "";
+
+        console.log(voices);
+
+        // Display the updated queue
+        voices.forEach((voice) => {
+          const listItem = document.createElement("option");
+          listItem.textContent = voice;
+          voiceSelect.appendChild(listItem);
+        });
+      });
+
+      voiceSelect.addEventListener("change", () => {
+        const selectedValue = voiceSelect.value;
+
+        // Send a request to the server to toggle the three-way toggle state
+        socket.emit("voiceSelect", selectedValue);
+      });
+    </script>
+  </body>
+</html>
